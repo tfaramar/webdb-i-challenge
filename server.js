@@ -24,7 +24,7 @@ server.get('/accounts/:id', validateId, (req, res) => {
     res.status(200).json(req.data);  
 });
 
-server.post('/accounts/', validateAccount, (req, res) => {
+server.post('/accounts/', validateAccount, validateName, (req, res) => {
     db('accounts')
         .insert(req.body, 'id')
         .then(([id]) => {
@@ -43,7 +43,7 @@ server.post('/accounts/', validateAccount, (req, res) => {
         });
 });
 
-server.put('/accounts/:id', validateId, validateAccount, validateName, (req, res) => {
+server.put('/accounts/:id', validateId, validateAccountUpdate, validateName, (req, res) => {
     db('accounts')
         .where('id', `${req.params.id}`).update(req.body)
         .then(count => {
@@ -105,6 +105,20 @@ function validateAccount(req, res, next){
     }
     next();
 };
+
+function validateAccountUpdate(req, res, next){
+    const account = req.body;
+    if (!account.name && !account.budget) {
+        return res.status(400).json({ errorMessage: "Please provide a name and budget for the project." });
+    }
+    if (account.name && (typeof account.name !== 'string')){
+        return res.status(400).json({ message: "Account name must be provided as a string." })
+    }
+    if (account.budget && (typeof account.budget !== 'number')){
+        return res.status(400).json({ message: "Account budget must be provided as a number." })
+    }
+    next();
+}
 
 function validateName(req, res, next){
     db('accounts')
