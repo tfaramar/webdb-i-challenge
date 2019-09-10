@@ -43,8 +43,16 @@ server.post('/accounts/', validateAccount, (req, res) => {
         });
 });
 
-server.put('/accounts/:id', (req, res) => {
-
+server.put('/accounts/:id', validateId, validateAccount, validateName, (req, res) => {
+    db('accounts')
+        .where('id', `${req.params.id}`).update(req.body)
+        .then(count => {
+            res.status(200).json({ message: `Updated ${count} records`})
+        })
+        .catch(error => {
+            console.log(error);
+            res.json(error);
+        });
 });
 
 server.delete('/accounts/:id', validateId, (req, res) => {
@@ -63,15 +71,16 @@ server.delete('/accounts/:id', validateId, (req, res) => {
 
 //custom middleware
 function validateId(req, res, next){
-    db.select('*')
-        .from('accounts')
-        .where('id', `${req.params.id}`).first()
+    db('accounts')
+        .select('*')
+        .where('id', `${req.params.id}`)
+        .first()
         .then(response => {
             if (response){
                 req.data = response;
                 next();
             } else {
-                res.status(404).json({ message: 'No account with that ID exists.' })
+                res.status(404).json({ message: 'No account  with that ID exists.' })
             }
         })
         .catch(error => {
@@ -95,7 +104,24 @@ function validateAccount(req, res, next){
         return res.status(400).json({ message: "Account budget must be provided as a number." })
     }
     next();
-}
+};
+
+function validateName(req, res, next){
+    db('accounts')
+        .select('*')
+        .where('name', `${req.body.name}`)
+        .first()
+        .then(response => {
+            if (response){
+                res.status(400).json({ message: 'An account with that name already exists. Please select a unique name for your account.' })
+            }
+            next()
+        })
+        .catch(error => {
+            console.log(error);
+            res.status(500).json({ message: 'There was an error checking that name in the database.' })   
+        });
+};
 
 
 module.exports = server;
